@@ -1,30 +1,46 @@
-import {ApolloServer,makeExecutableSchema} from 'apollo-server'
-//type definitions
+import { ApolloServer} from 'apollo-server'
+import mongoose from 'mongoose'
+import gql from 'graphql-tag';
 
-const typeDefs=`type Hello{
-    message: String!
+//type definitions
+import conn from '../config';
+import Post from './models/Post';
+
+
+const typeDefs = gql`
+type Post{
+    id: ID!,
+    body:String!,
+    createdAt:String!,
+    username:String!
 }
 
 type Query{
-    sayHello(name:String!):Hello
-}`
+    getPost:[Post]
+}
+`;
 
 const resolvers = {
-    Query:{
-        sayHello:(_, args)=>{
-            return {
-                message:`Hello ${args.name||'world'}`
+    Query: {
+        async getPost() {
+            try {
+                const posts = await Post.find();
+                return posts;
+            } catch (err) {
+                throw new Error(err)
             }
         }
     }
 }
-const schema=makeExecutableSchema({
+
+
+const apolloServer = new ApolloServer({
     typeDefs,
     resolvers
 })
 
-const apolloServer = new ApolloServer({
-    schema
-})
 
-apolloServer.listen(5000).then(({url})=>console.log(`Running on ${url}`))
+mongoose.connect(conn.MONGODB, { useUnifiedTopology: true,useNewUrlParser: true }).then(()=>{
+    return apolloServer.listen(5000)
+})
+.then(({ url }) => console.log(`Running on ${url}`))
